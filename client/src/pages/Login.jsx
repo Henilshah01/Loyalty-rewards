@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
-import { ErrorNote } from '../components/ui.jsx';
+import { ErrorNote, Logo } from '../components/ui.jsx';
 
 export default function Login() {
   const { user, login, register } = useAuth();
@@ -34,25 +34,33 @@ export default function Login() {
   }
 
   return (
-    <main className="container narrow">
-      <h1 className="brand big">Box Rewards</h1>
-      <p className="muted">Scan the code inside your box, collect points, claim rewards.</p>
-      <form className="card stack" onSubmit={submit}>
-        <h2>{mode === 'login' ? 'Sign in' : 'Create account'}</h2>
-        {mode === 'register' && (
-          <label>Name<input value={form.name} onChange={set('name')} required maxLength={80} autoComplete="name" /></label>
-        )}
-        <label>Email<input type="email" value={form.email} onChange={set('email')} required autoComplete="email" /></label>
-        <label>Password
-          <input type="password" value={form.password} onChange={set('password')} required minLength={mode === 'register' ? 8 : 1}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
-        </label>
-        <ErrorNote error={error} />
-        <button className="btn primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
-        <button type="button" className="btn link" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}>
-          {mode === 'login' ? 'New here? Create an account' : 'Have an account? Sign in'}
-        </button>
-      </form>
-    </main>
+    <div className="auth">
+      <section className="auth-art">
+        <span className="brand"><Logo size={28} />Loyalty Rewards</span>
+        <div>
+          <h1>Every box has a code. Every code is worth points.</h1>
+          <p>Open your box, scan the code inside, and spend your points on rewards.</p>
+        </div>
+      </section>
+      <section className="auth-form">
+        <form className="stack" onSubmit={submit}>
+          <h2>{mode === 'login' ? 'Sign in' : 'Create your account'}</h2>
+          {mode === 'register' && (
+            <label>Name<input value={form.name} onChange={set('name')} required maxLength={80} autoComplete="name" /></label>
+          )}
+          <label>Email<input type="email" value={form.email} onChange={set('email')} required autoComplete="email" /></label>
+          <label>Password
+            <input type="password" value={form.password} onChange={set('password')} required minLength={mode === 'register' ? 8 : 1}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+            {mode === 'register' && <span className="muted small">At least 8 characters.</span>}
+          </label>
+          <ErrorNote error={error} />
+          <button className="btn primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}</button>
+          <button type="button" className="btn link" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}>
+            {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Sign in'}
+          </button>
+        </form>
+      </section>
+    </div>
   );
 }

@@ -5,6 +5,8 @@ import { useAuth } from '../auth.jsx';
 import { fmtDate, useLoad } from '../hooks';
 import { Empty, ErrorNote, StatusBadge } from '../components/ui.jsx';
 
+const SEGMENTS = 10;
+
 export default function Customer() {
   const { user, refresh } = useAuth();
   const [params] = useSearchParams();
@@ -18,13 +20,21 @@ export default function Customer() {
   const [note, setNote] = useState('');
   const [redeemMsg, setRedeemMsg] = useState(null);
 
+  // Nearest reward the customer can't afford yet drives the progress boxes.
+  const list = rewards.data?.rewards ?? [];
+  const next = list.filter((r) => r.stock !== 0 && r.pointsCost > user.points).sort((a, b) => a.pointsCost - b.pointsCost)[0];
+  const filled = next ? Math.min(SEGMENTS, Math.floor((user.points / next.pointsCost) * SEGMENTS)) : SEGMENTS;
+  const nextText = next
+    ? `${next.pointsCost - user.points} more points for ${next.name}`
+    : list.length ? 'You can redeem any reward below.' : 'Rewards will appear here soon.';
+
   async function claim(e) {
     e.preventDefault();
     setClaiming(true);
     setClaimMsg(null);
     try {
       const r = await api('/claims', { method: 'POST', body: { code } });
-      setClaimMsg({ ok: true, text: `+${r.points} points added. Balance: ${r.balance}` });
+      setClaimMsg({ ok: true, text: `Added ${r.points} points. Your balance is ${r.balance}.` });
       setCode('');
       refresh();
       ledger.reload();
@@ -52,71 +62,75 @@ export default function Customer() {
 
   return (
     <div className="stack-lg">
-      <section className="card hero">
-        <div>
-          <div className="muted">Your points</div>
-          <div className="points">{user.points}</div>
-        </div>
-      </section>
+      <div className="top-grid">
+        <section className="tag" aria-label="Your points">
+          <span className="tag-hole" aria-hidden="true" />
+          <div className="tag-name">{user.name}</div>
+          {/* key restarts the stamp animation whenever the balance changes */}
+          <div className="tag-points" key={user.points}>{user.points}<span>points</span></div>
+          <div className="boxes" aria-hidden="true">
+            {Array.from({ length: SEGMENTS }, (_, i) => <i key={i} className={i < filled ? 'on' : ''} />)}
+          </div>
+          <p className="tag-next">{nextText}</p>
+        </section>
+
+        <section className="card">
+          <h2>Enter a box code</h2>
+          <form className="stack" onSubmit={claim}>
+            <input
+              className="claim-input" placeholder="XXXX-XXXX-XXXX-XXXX" value={code} maxLength={40}
+              onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} aria-label="Box code"
+            />
+            <div className="row">
+              <button className="btn primary" disabled={claiming || !code.trim()}>{claiming ? 'Checking…' : 'Add points'}</button>
+              <span className="muted small">Each code works once. You'll find it inside the box.</span>
+            </div>
+          </form>
+          {claimMsg && <p className={`note ${claimMsg.ok ? 'good' : 'bad'}`} role="status">{claimMsg.text}</p>}
+        </section>
+      </div>
 
       <section className="card">
-        <h2>Add points from a box</h2>
-        <form className="row" onSubmit={claim}>
-          <input
-            className="mono grow" placeholder="XXXX-XXXX-XXXX-XXXX" value={code} maxLength={40}
-            onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-            aria-label="Box code"
-          />
-          <button className="btn primary" disabled={claiming || !code.trim()}>{claiming ? 'Checking…' : 'Claim'}</button>
-        </form>
-        {claimMsg && <p className={`note ${claimMsg.ok ? 'good' : 'bad'}`} role="status">{claimMsg.text}</p>}
-        <p className="muted small">Each code works once. Found it under the flap of your box.</p>
-      </section>
-
-      <section>
-        <h2>Rewards</h2>
-        <label className="small muted">Delivery / contact details for your reward (optional)
-          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="Phone or address" />
+        <div className="section-title"><h2>Rewards</h2></div>
+        <label className="small muted">Phone or address for delivery (optional)
+          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
         </label>
-        {redeemMsg && <p className={`note ${redeemMsg.ok ? 'good' : 'bad'}`}>{redeemMsg.text}</p>}
+        {redeemMsg && <p className={`note ${redeemMsg.ok ? 'good' : 'bad'}`} role="status">{redeemMsg.text}</p>}
         <ErrorNote error={rewards.error} />
-        <div className="grid">
-          {rewards.data?.rewards.map((r) => {
+        <ul className="rows">
+          {list.map((r) => {
             const soldOut = r.stock === 0;
             const short = user.points < r.pointsCost;
             return (
-              <div className="card" key={r._id}>
-                <h3>{r.name}</h3>
-                <p className="muted small">{r.description}</p>
-                <div className="row between">
-                  <strong>{r.pointsCost} pts</strong>
-                  <button className="btn" disabled={soldOut || short} onClick={() => redeem(r)}>
-                    {soldOut ? 'Sold out' : short ? `Need ${r.pointsCost - user.points} more` : 'Redeem'}
-                  </button>
-                </div>
-              </div>
+              <li key={r._id}>
+                <div><strong>{r.name}</strong><div className="muted small">{r.description}</div></div>
+                <span className="cost">{r.pointsCost} pts</span>
+                <button className="btn" disabled={soldOut || short} onClick={() => redeem(r)}>
+                  {soldOut ? 'Sold out' : short ? `${r.pointsCost - user.points} to go` : 'Redeem'}
+                </button>
+              </li>
             );
           })}
-        </div>
-        {rewards.data && rewards.data.rewards.length === 0 && <Empty>No rewards available yet.</Empty>}
+        </ul>
+        {rewards.data && list.length === 0 && <Empty>No rewards yet. Check back soon.</Empty>}
       </section>
 
       <section className="cols">
         <div className="card">
-          <h2>Points activity</h2>
-          {ledger.data?.entries.length === 0 && <Empty>No activity yet.</Empty>}
+          <h2>Points history</h2>
+          {ledger.data?.entries.length === 0 && <Empty>No points yet. Enter your first box code above.</Empty>}
           <ul className="list">
             {ledger.data?.entries.map((e, i) => (
               <li key={i}>
-                <span><StatusBadge status={e.type} /> {e.note}</span>
-                <span className={e.points > 0 ? 'good-text' : ''}>{e.points > 0 ? '+' : ''}{e.points}<br /><span className="muted small">{fmtDate(e.createdAt)}</span></span>
+                <span><StatusBadge status={e.type} /> {e.note}<br /><span className="muted small">{fmtDate(e.createdAt)}</span></span>
+                <span className={e.points > 0 ? 'good-text' : ''}>{e.points > 0 ? '+' : ''}{e.points}</span>
               </li>
             ))}
           </ul>
         </div>
         <div className="card">
-          <h2>My reward requests</h2>
-          {requests.data?.items.length === 0 && <Empty>No requests yet.</Empty>}
+          <h2>Your reward requests</h2>
+          {requests.data?.items.length === 0 && <Empty>No requests yet. Redeem a reward when you have enough points.</Empty>}
           <ul className="list">
             {requests.data?.items.map((r) => (
               <li key={r._id}>

@@ -18,7 +18,6 @@ const startServer = async () => {
     // 4. Start backend server
     const server = app.listen(cfg.port, () => {
       console.log(`API listening on http://localhost:${cfg.port}`);
-      console.log(`Health check: http://localhost:${cfg.port}/api/health`);
     });
 
     // 5. Graceful shutdown
