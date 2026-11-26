@@ -8,7 +8,7 @@
 | API | **Node.js + Express 4** | Small, well understood, same language as the client. Business rules live in plain service modules, not in route handlers. |
 | Validation | **Zod** | One schema per endpoint; bad input never reaches the services. |
 | Auth | **JWT + bcryptjs** | Stateless API, no session store. Role (`customer` / `admin`) and account status are re-read from the DB on every request, so suspending a user takes effect immediately. |
-| Client | **React 18 + Vite + React Router** | Fast dev loop, tiny bundle, no UI framework – the MVP UI is ~150 lines of CSS. |
+| **Client** | **React 18 + Vite + React Router** | Fast dev loop, no UI framework, custom CSS. The `qrcode` library creates the QR labels. |
 | Tests | **node:test** (built in) | No test-runner dependency; services take their data access as a parameter (`deps`), so rules are tested with an in-memory store. |
 
 **Key design choice – services take `deps`.** `claimService` and `redemptionService` never import Mongoose.
@@ -77,7 +77,7 @@ sequenceDiagram
 
 | Threat | Control |
 |---|---|
-| Guessing codes | 60 random bits (≈10¹⁸). Checksum is **keyed** (HMAC with `CODE_SECRET`), so guesses fail the format check 99.9999% of the time without touching the DB. Lockout after 5 bad attempts. IP rate limit. |
+| Guessing codes | 60 random bits (≈10¹⁸). Checksum is **keyed** (HMAC with `CODE_SECRET`), so about 99.9999% of random guesses fail before any code lookup. Lockout after 5 bad attempts. IP rate limit. |
 | Reusing a code / two people claiming at once | One `findOneAndUpdate` with the guard `status = active` inside the filter. MongoDB applies condition + write atomically, so only one request can ever win. A **unique sparse index** on `LedgerEntry.code` is a second barrier against double credit. |
 | Database leak | Only `HMAC(secret, code)` is stored. Leaked hashes cannot be turned back into codes or redeemed. |
 | Typos locking out honest users | Lock is short (15 min), checksum makes typos rare, and the owner can reinstate a user instantly. |
@@ -138,7 +138,7 @@ erDiagram
     ref user
     enum type "earn|redeem|refund"
     int points "signed"
-    ref code UK_sparse
+    ref code UK "sparse"
     ref redemption
   }
   REWARD {

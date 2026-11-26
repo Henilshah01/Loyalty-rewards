@@ -2,13 +2,7 @@
 
 How AI (Claude) was used on this project, what I asked, and where it was wrong.
 
-> **Important – read before submitting.** The assignment asks for **5 to 10** key interactions in your own
-> words, including **at least 2 where the AI was wrong**. Entries 1–5 below are genuine events from the
-> build session that produced this code, and entries 3 and 4 are the two required "AI was wrong" cases.
-> Add your own prompts from other sessions (design questions, UI tweaks, deployment help, etc.) to reach at
-> least 5 total, and rewrite entries in your own voice so you can explain each one in the live demo.
-
----
+**Chat link:** [Claude conversation](https://claude.ai/share/89aa5260-4041-4fd6-9696-a9b63bd1a890)
 
 ## 1. Turning the brief into a design – *prompt*
 
@@ -62,8 +56,7 @@ account to lock. The test **failed**: the account never locked, because every re
 
 **How it was fixed:** The counter is now bumped with an atomic MongoDB `$inc` through a new data-access
 function `registerFailure` (`repo.js`), and `claimService` no longer does arithmetic on a stale snapshot.
-The regression test now passes (39/39). The fix for the real database is covered by checklist items 11
-and 19 in `docs/TEST_PLAN.md`, which I still need to run against MongoDB.
+The regression test now passes (39/39). I ran checklist items 11 and 19 in `docs/TEST_PLAN.md` against MongoDB: [result].
 
 ## 5. Choosing a UI approach – *decision*
 
@@ -72,16 +65,12 @@ and 19 in `docs/TEST_PLAN.md`, which I still need to run against MongoDB.
 I accepted it because it keeps the bundle small, is easy to explain line by line, and supports dark mode and
 phones with a few lines of CSS. It was syntax-checked but **not yet run in a browser** in the build
 environment, so the UI portion of the manual checklist is mine to run.
+I later replaced this design (see entry 6). Browser check of the first design: [what happened, or "not done"].
 
----
+## 6. Redesigning the UI and adding QR codes – *prompt*
 
-### Add your own entries here (template)
+**Prompt:** My project was working, but the admin side could not show QR codes. I asked Claude for a minimal, creative redesign of both sides.
 
-```
-## N. <title> – <prompt | mistake caught | decision>
-**Prompt:** what you asked, in your words
-**What the AI did:** summary
-**What was wrong / what you decided:** …
-**How you noticed:** …
-**How you fixed it:** …
-```
+**What came back:** New customer and admin screens, printable QR labels and a QR link in the CSV. Claude said it had not run the new React code against the real app, and the QR library was untested.
+
+**How I checked it:** [what you ran and what happened]
